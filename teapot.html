@@ -49,10 +49,30 @@ void main() {
 	</canvas>
 </div>
 <div>
-	<div id="xValue"></div><input type="range" min="1" max="100" value="50" class="slider" id="xSlide"/>
-	<div id="yValue"></div><input type="range" min="1" max="100" value="50" class="slider" id="ySlide"/>
-	<div id="+ZValue"></div><input type="range" min="1" max="100" value="50" class="slider" id="+ZSlide"/>
-	<div id="-ZValue"></div><input type="range" min="1" max="100" value="50" class="slider" id="-ZSlide"/>
+	<div id="xValue"></div>
+	<div class="slider-container">
+		0.1&nbsp;
+		<input type="range" min="0.1" max="30" value="5" class="slider" id="xSlide"/>&nbsp;
+		30
+	</div>
+	<div id="yValue"></div>
+	<div class="slider-container">
+		0.1
+		<input type="range" min="0.1" max="30" value="5" class="slider" id="ySlide"/>
+		30
+	</div>
+	<div id="+ZValue"></div>
+	<div class="slider-container">
+		0.1
+		<input type="range" min="0.1" max="200" value="10" class="slider" id="+ZSlide"/>
+		200
+	</div>
+	<div id="-ZValue"></div>
+	<div class="slider-container">
+		0.1
+		<input type="range" min="0.1" max="300" value="50" class="slider" id="-ZSlide"/>
+		300
+	</div>
 </div>
 </body>
 </html>

@@ -14,6 +14,9 @@ var eye = vec3(0,0,1);
 var at = vec3(0,0,-1);
 var up = vec3(0,1,0);
 
+var fovy = 100;
+var aspect = 1;
+
 
 
 window.onload = function init() {
@@ -81,21 +84,16 @@ function addColors(){
 }
 
 function frustrum(left, right, bottom, top, near, far){
-	return mat4(
-		vec4(2/(right-left),0,0,(-(right+left)/(right-left))),
-		vec4(0,2/(top-bottom),0,(-(top+bottom)/(top-bottom))),
-		vec4(0,0,-2/(far-near),((far+near)/(far-near))),
-		vec4(0,0,0,1)
-	)
+	return mat4()
 }
 
-function perspectiveMat(width, height, near, far){
+function perspectiveMat(fovy, aspect, near, far){
 	return mat4(
-		vec4(near/width,0,0,0),
-		vec4(0,near/height,0,0),
+		vec4(1/Math.tan(radians(fovy)/aspect),0,0,0),
+		vec4(0,1/Math.tan(radians(fovy)),0,0),
 		vec4(0,0,-(far+near)/(far-near),-(2*far*near)/(far-near)),
 		vec4(0,0,-1,0)
-	)
+	);
 }
 
 function lookAt(eye, at, up){
@@ -108,7 +106,7 @@ function lookAt(eye, at, up){
         vec4(n[0], n[1], n[2], 0),
         vec4(0 , 0 , 0 , 1)
 		);
-
+	
     return mult(cam, translate3d(-eye[0], -eye[1], -eye[2]));
 }
 
@@ -122,13 +120,14 @@ function render() {
 	posZ = document.getElementById('+ZSlide').value;
 	negZ = document.getElementById('-ZSlide').value;
 
-	document.getElementById('xValue').innerHTML = "Width: " + x;
-	document.getElementById('yValue').innerHTML = "Height: " + y;
-	document.getElementById('+ZValue').innerHTML = "Near: " + posZ;
-	document.getElementById('-ZValue').innerHTML = "Far: " + negZ;
+	document.getElementById('xValue').innerHTML = "Width (0.1-30): " + x; //actually increasing width for aspect ratio
+	document.getElementById('yValue').innerHTML = "Height (0.1-30): " + y; //actually increasing height for asepct ratio
+	document.getElementById('+ZValue').innerHTML = "Near (0.1-200): " + posZ; //actually increasing fovY
+	document.getElementById('-ZValue').innerHTML = "Far (0.1-300):  " + negZ; //actually brings near closer to you
 
+	aspect = x/y
 	gl.uniformMatrix4fv(mvmLoc, false, flatten(lookAt(eye, at, up)));
-	gl.uniformMatrix4fv(perspectiveLoc, false, flatten(perspectiveMat(x, y, posZ, -negZ)));
+	gl.uniformMatrix4fv(perspectiveLoc, false, flatten(perspectiveMat(posZ, aspect, 0.1 , negZ)));
 
     gl.drawElements(gl.TRIANGLES, teapot_indices.length, gl.UNSIGNED_SHORT, 0);
 
@@ -137,54 +136,6 @@ function render() {
     );
 }
 
-/*function setCamera(input){
-	switch(input){
-		case '+X':
-			eye = vec3(1,0,0);
-			at = vec3(-1,0,0);
-			up = vec3(0,1,0);
-			break;
-		case '-X':
-			eye = vec3(-1,0,0);
-			at = vec3(1,0,0);
-			up = vec3(0,1,0);
-			break;
-		case '+Y':
-			eye = vec3(0,1,0);
-			at = vec3(0,-1,0);
-			up = vec3(0,0,-1)
-			break;
-		case '-Y':
-			eye = vec3(0,-1,0);
-			at = vec3(0,1,0);
-			up = vec3(0,0,-1);
-			break;
-		case '+Z':
-			eye = vec3(0,0,1);
-			at = vec3(0,0,-1);
-			up = vec3(0,1,0);
-			break;
-		case '-Z':
-			eye = vec3(0,0,-1);
-			at = vec3(0,0,1);
-			up = vec3(0,1,0);
-			break;
-		case 'UL':
-			eye = vec3(-1,1,0.5);
-			at = vec3(1,-1,-0.5);
-			up = vec3(0,1,0);
-			break;
-		case 'UR':
-			eye = vec3(1,1,0.5);
-			at = vec3(-1,-1,-0.5);
-			up = vec3(0,1,0);
-			break;
-		default:
-			console.log("that aint it fam")
-			break;
-    }
-}*/
-
 function translate3d (tx, ty, tz) {
 	return mat4( 	
 		vec4(1, 0, 0, tx),
@@ -192,4 +143,13 @@ function translate3d (tx, ty, tz) {
 		vec4(0, 0, 1, tz),
 		vec4(0, 0, 0, 1)
 	);
+}
+
+function scale3d (sx, sy, sz) {
+	return mat4(
+		vec4(sx, 0, 0, 0),
+		vec4(0, sy, 0, 0),
+		vec4(0, 0, sz, 0),
+		vec4(0, 0, 0, 1)
+	)
 }

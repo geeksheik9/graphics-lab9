@@ -1,6 +1,6 @@
 .slider{
   -webkit-appearance: none;
-    width: 512px;
+    width: 88%;
     height: 5px;
     border-radius: 5px;
     background: #d3d3d3;
@@ -8,6 +8,10 @@
     opacity: 0.7;
     -webkit-transition: opacity .15s ease-in-out;
     transition: opacity .15s ease-in-out;
-    margin-top: 5px;
-    margin-bottom: 15px;;
+    vertical-align: middle;
+}
+
+.slider-container {
+  height: 35px;
+  width: 512px;
 }
