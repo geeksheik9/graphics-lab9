@@ -78,15 +78,6 @@ function addColors(){
     }
 }
 
-function perspective(left, right, bottom, top, near, far){
-		return mat4(
-		vec4(2*near/(right-left),0,0,-near*(right+left)/(right-left)),
-		vec4(0,2*near/(top-bottom),0,-near*(top+bottom)/(top-bottom)),
-		vec4(0,0,-(far+near)/(far-near), 2*far*near/(near-far)),
-		vec4(0,0,-1,0)
-	)
-}
-
 function lookAt(eye, at, up){
 	n = normalize(subtract(at , eye));
     u = cross(n , normalize(up));
@@ -110,19 +101,12 @@ function translate3d (tx, ty, tz) {
 	);
 }
 
-function createFrustum(left, right, bottom, top, near, far) {
-    midx = (left + right) * 0.5;
-    midy = (bottom + top) * 0.5;
-    frustumMatrix = mat4(vec4(1, 0, 0, -midx),
-                         vec4(0, 1, 0, -midy),
+function createPerspective(left, right, bottom, top, near, far) {
+	frustumMatrix = mat4(vec4(1, 0, 0, (left+right)/2),
+                         vec4(0, 1, 0, (bottom + top)/2),
                          vec4(0, 0, 1, 0),
                          vec4(0, 0, 0, 1)
                          );
-	return frustumMatrix;
-}
-
-function createPerspective(left, right, bottom, top, near, far) {
-	frustumMatrix = createFrustum(-1,1,-1,1,0,0);
     perspectiveMatrix = mat4(vec4(near, 0, 0, 0),
                              vec4(0, near, 0, 0),
                              vec4(0, 0, 1, 0),
@@ -133,14 +117,12 @@ function createPerspective(left, right, bottom, top, near, far) {
                        vec4(0, 0, 1, 0),
                        vec4(0, 0, 0, 1)
                        );
-    var c1 = (2*far*near)/(near-far);
-    var c2 = (far + near)/(far-near);
-
     mappingDepth = mat4(vec4(1, 0, 0, 0),
                         vec4(0, 1, 0, 0),
-                        vec4(0, 0, -c2, c1),
+                        vec4(0, 0, -(far + near)/(far-near), (2*far*near)/(near-far)),
                         vec4(0, 0, -1, 0 )
                         );
+
     return mult(scaleMatrix, mult(perspectiveMatrix, mult(mappingDepth, frustumMatrix)));
 }
 
