@@ -14,11 +14,6 @@ var eye = vec3(0,0,1);
 var at = vec3(0,0,-1);
 var up = vec3(0,1,0);
 
-var fovy = 100;
-var aspect = 1;
-
-
-
 window.onload = function init() {
 
 	// get the canvas handle from the document's DOM
@@ -83,17 +78,13 @@ function addColors(){
     }
 }
 
-function frustrum(left, right, bottom, top, near, far){
-	return mat4()
-}
-
-function perspectiveMat(fovy, aspect, near, far){
-	return mat4(
-		vec4(1/Math.tan(radians(fovy)/aspect),0,0,0),
-		vec4(0,1/Math.tan(radians(fovy)),0,0),
-		vec4(0,0,-(far+near)/(far-near),-(2*far*near)/(far-near)),
+function perspective(left, right, bottom, top, near, far){
+		return mat4(
+		vec4(2*near/(right-left),0,0,-near*(right+left)/(right-left)),
+		vec4(0,2*near/(top-bottom),0,-near*(top+bottom)/(top-bottom)),
+		vec4(0,0,-(far+near)/(far-near), 2*far*near/(near-far)),
 		vec4(0,0,-1,0)
-	);
+	)
 }
 
 function lookAt(eye, at, up){
@@ -106,34 +97,8 @@ function lookAt(eye, at, up){
         vec4(n[0], n[1], n[2], 0),
         vec4(0 , 0 , 0 , 1)
 		);
-	
+
     return mult(cam, translate3d(-eye[0], -eye[1], -eye[2]));
-}
-
-function render() {
-	// this is render loop
-	// clear the display with the background color
-    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-	x = document.getElementById('xSlide').value;
-	y = document.getElementById('ySlide').value;
-	posZ = document.getElementById('+ZSlide').value;
-	negZ = document.getElementById('-ZSlide').value;
-
-	document.getElementById('xValue').innerHTML = "Width (0.1-30): " + x; //actually increasing width for aspect ratio
-	document.getElementById('yValue').innerHTML = "Height (0.1-30): " + y; //actually increasing height for asepct ratio
-	document.getElementById('+ZValue').innerHTML = "Near (0.1-200): " + posZ; //actually increasing fovY
-	document.getElementById('-ZValue').innerHTML = "Far (0.1-300):  " + negZ; //actually brings near closer to you
-
-	aspect = x/y
-	gl.uniformMatrix4fv(mvmLoc, false, flatten(lookAt(eye, at, up)));
-	gl.uniformMatrix4fv(perspectiveLoc, false, flatten(perspectiveMat(posZ, aspect, 0.1 , negZ)));
-
-    gl.drawElements(gl.TRIANGLES, teapot_indices.length, gl.UNSIGNED_SHORT, 0);
-
-    setTimeout(
-        function (){requestAnimFrame(render);}, delay
-    );
 }
 
 function translate3d (tx, ty, tz) {
@@ -145,11 +110,60 @@ function translate3d (tx, ty, tz) {
 	);
 }
 
-function scale3d (sx, sy, sz) {
-	return mat4(
-		vec4(sx, 0, 0, 0),
-		vec4(0, sy, 0, 0),
-		vec4(0, 0, sz, 0),
-		vec4(0, 0, 0, 1)
-	)
+function createFrustum(left, right, bottom, top, near, far) {
+    midx = (left + right) * 0.5;
+    midy = (bottom + top) * 0.5;
+    frustumMatrix = mat4(vec4(1, 0, 0, -midx),
+                         vec4(0, 1, 0, -midy),
+                         vec4(0, 0, 1, 0),
+                         vec4(0, 0, 0, 1)
+                         );
+	return frustumMatrix;
+}
+
+function createPerspective(left, right, bottom, top, near, far) {
+	frustumMatrix = createFrustum(-1,1,-1,1,0,0);
+    perspectiveMatrix = mat4(vec4(near, 0, 0, 0),
+                             vec4(0, near, 0, 0),
+                             vec4(0, 0, 1, 0),
+                             vec4(0, 0, -1, 0)
+                             );
+    scaleMatrix = mat4(vec4(2/(right-left), 0, 0, 0),
+                       vec4(0, 2/(top-bottom), 0, 0),
+                       vec4(0, 0, 1, 0),
+                       vec4(0, 0, 0, 1)
+                       );
+    var c1 = (2*far*near)/(near-far);
+    var c2 = (far + near)/(far-near);
+
+    mappingDepth = mat4(vec4(1, 0, 0, 0),
+                        vec4(0, 1, 0, 0),
+                        vec4(0, 0, -c2, c1),
+                        vec4(0, 0, -1, 0 )
+                        );
+    return mult(scaleMatrix, mult(perspectiveMatrix, mult(mappingDepth, frustumMatrix)));
+}
+
+function render() {
+	// this is render loop
+	// clear the display with the background color
+    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+	width = parseFloat(document.getElementById('width').value);
+	height = parseFloat(document.getElementById('height').value);
+	near = parseFloat(document.getElementById('near').value);
+	far = parseFloat(document.getElementById('far').value);
+
+	width = parseFloat(width);
+	height = parseFloat(height);
+	near = parseFloat(near);
+	far = parseFloat(far);
+	
+	gl.uniformMatrix4fv(mvmLoc, false, flatten(lookAt(eye, at, up)));
+	gl.uniformMatrix4fv(perspectiveLoc, false, flatten(createPerspective(-width, width, -height, height, 100, near)));
+    gl.drawElements(gl.TRIANGLES, teapot_indices.length, gl.UNSIGNED_SHORT, 0);
+
+    setTimeout(
+        function (){requestAnimFrame(render);}, delay
+    );
 }
