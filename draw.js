@@ -14,10 +14,31 @@ var eye = vec3(0,0,1);
 var at = vec3(0,0,-1);
 var up = vec3(0,1,0);
 
+var rotating = false
+var theta = 0;
+
+var prevMouse = {
+	x: 0,
+	y: 0
+}
+
+rotationMat = mat4(
+	vec4(1,0,0,0),
+	vec4(0,1,0,0),
+	vec4(0,0,1,0),
+	vec4(0,0,0,1)
+)
+
 window.onload = function init() {
 
 	// get the canvas handle from the document's DOM
     var canvas = document.getElementById( "gl-canvas" );
+
+	canvas.addEventListener("mousemove", rotateByMouse, false);
+	canvas.addEventListener("mousedown", mouseDown, false);
+	//canvas.addEventListener("mousedown", rotateByMouse, false)
+	canvas.addEventListener("mouseup", mouseUp, false);
+
 	// initialize webgl
     gl = WebGLUtils.setupWebGL(canvas);
 	// check for errors
@@ -43,7 +64,8 @@ window.onload = function init() {
 	// exactly the name of the shader variable
 	colorLoc = gl.getUniformLocation(program, "vertColor");
 	mvmLoc = gl.getUniformLocation(program, 'mvm');
-	perspectiveLoc = gl.getUniformLocation(program, 'perspective')
+	perspectiveLoc = gl.getUniformLocation(program, 'perspective');
+	rotationMatLoc = gl.getUniformLocation(program, 'rotationMat');
 
 	iBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iBuffer);
@@ -75,6 +97,7 @@ window.onload = function init() {
 function addColors(){
     for(let i = 0; i < teapot_vertices.length; i++){
         vertexColors.push([Math.random(), Math.random(), Math.random(), 1])
+        //vertexColors.push([0.75, 0.75, 0.75, 1])
     }
 }
 
@@ -90,15 +113,6 @@ function lookAt(eye, at, up){
 		);
 
     return mult(cam, translate3d(-eye[0], -eye[1], -eye[2]));
-}
-
-function translate3d (tx, ty, tz) {
-	return mat4( 	
-		vec4(1, 0, 0, tx),
-		vec4(0, 1, 0, ty),
-		vec4(0, 0, 1, tz),
-		vec4(0, 0, 0, 1)
-	);
 }
 
 function createPerspective(left, right, bottom, top, near, far) {
@@ -130,22 +144,99 @@ function render() {
 	// this is render loop
 	// clear the display with the background color
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-	width = parseFloat(document.getElementById('width').value);
-	height = parseFloat(document.getElementById('height').value);
-	near = parseFloat(document.getElementById('near').value);
-	far = parseFloat(document.getElementById('far').value);
-
-	width = parseFloat(width);
-	height = parseFloat(height);
-	near = parseFloat(near);
-	far = parseFloat(far);
 	
 	gl.uniformMatrix4fv(mvmLoc, false, flatten(lookAt(eye, at, up)));
-	gl.uniformMatrix4fv(perspectiveLoc, false, flatten(createPerspective(-width, width, -height, height, 100, near)));
+	gl.uniformMatrix4fv(perspectiveLoc, false, flatten(createPerspective(-100, 100, -100, 100, 100, -100)));
     gl.drawElements(gl.TRIANGLES, teapot_indices.length, gl.UNSIGNED_SHORT, 0);
 
     setTimeout(
         function (){requestAnimFrame(render);}, delay
     );
+}
+
+function mouseDown(event){
+	rotating = true;
+	prevMouse.x = event.pageX;
+	prevMouse.y = event.pageY;
+}
+
+function mouseUp(event){
+	rotating = false;
+	prevMouse.x = event.pageX;
+	prevMouse.y = event.pageY;
+}
+
+function rotateByMouse(event){
+	//prevMouse.x = event.pageX;
+	//prevMouse.y = event.pageY;
+	if(rotating){
+		prevNDC = deviceToNDC(prevMouse.x, prevMouse.y);
+		prevY = calcYUsingUnitSphere(prevNDC[0], prevNDC[1]);
+		prevPoint =  vec3(prevNDC[0], prevY, prevNDC[1]);
+
+		posX = event.pageX;
+		posY = event.pageY;
+		ndcVec = deviceToNDC(posX, posY);
+		y = calcYUsingUnitSphere(ndcVec[0], ndcVec[1]);
+		trackBallPoint = vec3(ndcVec[0], y, ndcVec[1]);
+
+		rotationAxis = cross(prevPoint, trackBallPoint);
+
+		theta += 2
+		w = Math.cos(Math.PI/theta) + Math.sin(Math.PI/theta);
+
+		quaterion = vec4(w, rotationAxis[0], rotationAxis[1], rotationAxis[2])
+
+		rotationMat = makeQuaterionMatrix(quaterion);
+	}
+	gl.uniformMatrix4fv(rotationMatLoc, false, flatten(rotationMat))
+}
+
+function calcYUsingUnitSphere(x, y){
+	r = 1;
+
+	d = calcDistance(x,y)
+	if(d > 1) {
+		x = x/d
+		y = y/d
+	}
+
+	value = r*r - x*x - y*y;
+	if(value < 0.001){
+		value = 0.00001;
+	}
+
+	z = Math.sqrt(value)
+
+	return z
+}
+
+function calcDistance(x,y){
+	return Math.sqrt((0-x)*(0-x) + (0-y)*(0-y))
+}
+
+function makeQuaterionMatrix(q){
+	return mat4(
+		vec4(
+			2 * (q[0] * q[0] + q[1] * q[1]) - 1, 
+			2 * (q[1] * q[2] - q[0] * q[3]),
+			2 * (q[1] * q[3] + q[0] * q[2]),
+			0
+		),
+		vec4(
+			2 * (q[1] * q[2] + q[0] * q[3]),
+			2 * (q[0] * q[0] + q[2] * q[2]) - 1,
+			2 * (q[2] * q[3] - q[0] * q[1]),
+			0
+		),
+		vec4(
+			2 * (q[1] * q[3] - q[0] * q[2]),
+			2 * (q[2] * q[3] + q[0] * q[1]),
+			2 * (q[0] * q[0] + q[3] * q[3]),
+			0
+		),
+		vec4(
+			0,0,0,1
+		),
+	)
 }
